@@ -46,10 +46,7 @@ func processText(desc string) string {
 
 func createPDF(text string, filename string) error {
 	pdf := gofpdf.New("P", "mm", "A4", "")
-
-	// Add your TTF font (download NotoSansArmenian-Regular.ttf and put in project)
-	pdf.AddUTF8Font("NotoSansArm", "", "noto-sans-armenian-armenian-600-normal.ttf")
-
+	pdf.AddUTF8Font("NotoSansArm", "", "/fonts/noto-sans-armenian-armenian-600-normal.ttf")
 	pdf.SetFont("NotoSansArm", "", 14)
 	pdf.AddPage()
 	pdf.MultiCell(0, 10, text, "", "", false)

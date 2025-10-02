@@ -70,19 +70,16 @@ func readRoadPolice() error {
 	}
 
 	// Save debug artifacts
-	if err := os.WriteFile("page.html", []byte(outerHTML), 0644); err != nil {
-		log.Printf("failed saving html: %v", err)
-	}
+	// if err := os.WriteFile("page.html", []byte(outerHTML), 0644); err != nil {
+	// 	log.Printf("failed saving html: %v", err)
+	// }
 	if err := os.WriteFile("page.png", screenshotBuf, 0644); err != nil {
 		log.Printf("failed saving screenshot: %v", err)
 	}
 
-	// Use gofpdf to write the extracted HTML/text into a PDF
-
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
-	pdf.AddUTF8Font("NotoSansArm", "", "NotoSansArmenian-Regular.ttf")
-
+	pdf.AddUTF8Font("NotoSansArm", "", "/fonts/NotoSansArmenian-Regular.ttf")
 	pdf.SetFont("NotoSansArm", "", 14)
 
 	// Add plain text version of HTML
