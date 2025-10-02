@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/jung-kurt/gofpdf"
 )
 
 func readRoadPolice() error {
@@ -42,7 +43,7 @@ func readRoadPolice() error {
 		chromedp.EvaluateAsDevTools(`document.querySelectorAll("button.blue-btn").length`, &nodesCount),
 
 		// Save HTML
-		chromedp.OuterHTML("html", &outerHTML, chromedp.ByQuery),
+		// chromedp.OuterHTML("html", &outerHTML, chromedp.ByQuery),
 
 		// Take screenshot
 		chromedp.CaptureScreenshot(&screenshotBuf),
@@ -56,45 +57,40 @@ func readRoadPolice() error {
 
 		// Try native click
 		chromedp.Click(`button.blue-btn`, chromedp.ByQuery),
-
-		chromedp.Sleep(800 * time.Millisecond),
-
-		// Try JS click
-		chromedp.EvaluateAsDevTools(`(function(){
-            const btn = document.querySelector("button.blue-btn");
-            if(!btn) return "no-button";
-            btn.scrollIntoView();
-            if (typeof btn.click === "function") { btn.click(); return "clicked-js"; }
-            return "no-click-fn";
-        })()`, &evalResult),
-
-		chromedp.Sleep(1200 * time.Millisecond),
-
-		// Try form submit
-		chromedp.EvaluateAsDevTools(`(function(){
-            const f = document.querySelector("#form-block");
-            if(!f) return "no-form";
-            try { f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); return "dispatched-submit"; } 
-            catch(e) { try { f.submit(); return "native-submit"; } catch(e2){ return "submit-failed"; } }
-        })()`, &evalResult),
-
 		chromedp.Sleep(1500 * time.Millisecond),
 
 		// Read recaptcha response
 		chromedp.Value(`#recaptchaResponse`, &recaptchaVal, chromedp.ByQuery),
+		chromedp.WaitVisible(`#result-inner`, chromedp.ByID),
+		chromedp.Text(`#result-inner`, &outerHTML, chromedp.ByID),
 	}
-
 	if err := chromedp.Run(ctx, tasks); err != nil {
-		_ = ioutil.WriteFile("page_error.html", []byte(outerHTML), 0644)
+		_ = os.WriteFile("page_error.html", []byte(outerHTML), 0644)
 		return fmt.Errorf("chromedp run failed: %w", err)
 	}
 
 	// Save debug artifacts
-	if err := ioutil.WriteFile("page.html", []byte(outerHTML), 0644); err != nil {
+	if err := os.WriteFile("page.html", []byte(outerHTML), 0644); err != nil {
 		log.Printf("failed saving html: %v", err)
 	}
-	if err := ioutil.WriteFile("page.png", screenshotBuf, 0644); err != nil {
+	if err := os.WriteFile("page.png", screenshotBuf, 0644); err != nil {
 		log.Printf("failed saving screenshot: %v", err)
+	}
+
+	// Use gofpdf to write the extracted HTML/text into a PDF
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.AddUTF8Font("NotoSansArm", "", "NotoSansArmenian-Regular.ttf")
+
+	pdf.SetFont("NotoSansArm", "", 14)
+
+	// Add plain text version of HTML
+	pdf.MultiCell(0, 10, outerHTML, "", "", false)
+
+	// Save PDF
+	if err := pdf.OutputFileAndClose("page.pdf"); err != nil {
+		return fmt.Errorf("failed saving pdf: %w", err)
 	}
 
 	fmt.Println("button nodes found:", nodesCount)
